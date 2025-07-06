@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit User</title>
+  </head>
+  <body>
+    <h1>Edit User</h1>
+
+    <form id="editUserForm">
+      <input type="hidden" name="id" value="<%= user.id %>" />
+
+      <label>Username:</label>
+      <input
+        type="text"
+        name="username"
+        value="<%= user.username %>"
+        required
+      /><br /><br />
+
+      <label>Email:</label>
+      <input
+        type="email"
+        name="email"
+        value="<%= user.email %>"
+        required
+      /><br /><br />
+
+      <button type="submit">Update</button>
+    </form>
+
+    <script>
+      const form = document.getElementById("editUserForm");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const data = {
+          id: formData.get("id"),
+          username: formData.get("username"),
+          email: formData.get("email"),
+        };
+
+        const response = await fetch("/api/users", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          alert("User updated successfully!");
+          window.location.reload();
+        } else {
+          const msg = await response.text();
+          alert("Failed to update: " + msg);
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+# Node.js dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# dotenv environment files
+.env
+.env.*.local
+
+# Postman temp and exports
+*.postman_collection.json
+
+# Database and sensitive files
+database.sqlite
+*.db
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+
+# Coverage and test output
+coverage/
+.nyc_output/
+
+# Optional: local uploads or static files
+/public/uploads/
