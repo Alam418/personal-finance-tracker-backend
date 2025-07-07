@@ -210,26 +210,65 @@ export const deleteTransaction = async (req, res) => {
 
 // GET transaction summary
 export const getTransactionSummary = async (req, res) => {
-  try {
-    const result = await db.query(
-      `SELECT 
-      COALESCE(SUM(CASE WHEN type = 'income' THEN amount END), 0) AS total_income,
-      COALESCE(SUM(CASE WHEN type = 'expense' THEN amount END), 0) AS total_expense
-      FROM transactions
-      WHERE user_id = $1`,
-      [req.user.id]
-    );
+  const userId = req.user.id;
+  const { start_date, end_date, type, account_id, category_id } = req.query;
 
-    const { total_income, total_expense } = result.rows[0];
+  try {
+    let baseQuery = `FROM transactions WHERE user_id = $1`;
+    const params = [userId];
+    let paramIndex = 2;
+
+    if (start_date) {
+      baseQuery += ` AND transaction_date >= $${paramIndex}`;
+      params.push(start_date);
+      paramIndex++;
+    }
+
+    if (end_date) {
+      baseQuery += ` AND transaction_date <= $${paramIndex}`;
+      params.push(end_date);
+      paramIndex++;
+    }
+
+    if (type) {
+      baseQuery += ` AND type = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    if (account_id) {
+      baseQuery += ` AND account_id = $${paramIndex}`;
+      params.push(account_id);
+      paramIndex++;
+    }
+
+    if (category_id) {
+      baseQuery += ` AND category_id = $${paramIndex}`;
+      params.push(category_id);
+      paramIndex++;
+    }
+
+    const summaryQuery = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount END), 0) AS total_income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount END), 0) AS total_expense,
+        COUNT(*) AS total_transactions
+      ${baseQuery}
+    `;
+
+    const result = await db.query(summaryQuery, params);
+
+    const { total_income, total_expense, total_transactions } = result.rows[0];
     const balance = total_income - total_expense;
 
     res.status(200).json({
       total_income,
       total_expense,
       balance,
+      total_transactions,
     });
   } catch (error) {
-    console.error("GET /transaction/summary error", error);
+    console.error("GET /transactions/summary error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

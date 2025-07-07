@@ -37,3 +37,6 @@ coverage/
 
 # Optional: local uploads or static files
 /public/uploads/
+
+
+swagger-output.json
