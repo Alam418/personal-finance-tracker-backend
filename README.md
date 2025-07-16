@@ -1,3 +1,4 @@
+> 🚀 Status: Project completed (backend API fully functional & integrated)
 
 # 💸 Personal Finance Tracker API
 
