@@ -4,19 +4,16 @@ import env from "dotenv";
 env.config();
 
 const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+  const token = req.cookies.token;
 
-  if (!token) {
-    return res.status(401).json({ message: "Token not provided" });
-  }
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "rahasia");
     req.user = decoded;
     next();
   } catch (error) {
-    console.error({ message: "Invalid token", error });
-    res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Token expired or invalid" });
   }
 };
 

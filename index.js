@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import fs from "fs";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth/authRoutes.js";
 import userRoutes from "./routes/user/userRoutes.js";
@@ -18,11 +19,14 @@ const port = process.env.PORT || 3000;
 const swaggerDocument = JSON.parse(fs.readFileSync("./swagger-output.json"));
 
 // Middleware
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
+app.use(cookieParser());
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
