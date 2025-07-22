@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.get("/accounts", authMiddleware, getAllBankAccount);
-router.post("/accounts", authMiddleware, addBankAccount);
-router.get("/accounts/:id", authMiddleware, bankAccountDetail);
-router.patch("/accounts/:id", authMiddleware, editBankAccount);
-router.delete("/accounts/:id", authMiddleware, deleteBankAccount);
+router.get("/", authMiddleware, getAllBankAccount);
+router.post("/", authMiddleware, addBankAccount);
+router.get("/:id", authMiddleware, bankAccountDetail);
+router.patch("/:id", authMiddleware, editBankAccount);
+router.delete("/:id", authMiddleware, deleteBankAccount);
 
 export default router;

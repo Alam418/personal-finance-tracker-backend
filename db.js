@@ -3,11 +3,10 @@ import env from "dotenv";
 
 env.config();
 
-const connectionString = process.env.DATABASE_URL;
+const { Pool } = pg;
 
-const db = new pg.Client({ connectionString: connectionString });
-db.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
-  .catch((err) => console.error("DB connection error:", err));
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 export default db;

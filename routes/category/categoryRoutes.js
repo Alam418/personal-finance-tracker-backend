@@ -9,9 +9,9 @@ import {
 
 const router = express.Router();
 
-router.get("/categories", authMiddleware, getAllCategories);
-router.post("/categories", authMiddleware, addCategories);
-router.patch("/categories/:id", authMiddleware, editCategories);
-router.delete("/categories/:id", authMiddleware, deleteCategories);
+router.get("/", authMiddleware, getAllCategories);
+router.post("/", authMiddleware, addCategories);
+router.patch("/:id", authMiddleware, editCategories);
+router.delete("/:id", authMiddleware, deleteCategories);
 
 export default router;

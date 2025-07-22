@@ -124,8 +124,11 @@ export const createTransaction = async (req, res) => {
     type,
   };
 
+  const client = await db.connect();
   try {
-    const result = await db.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       `INSERT INTO transactions 
         (user_id, account_id, category_id, amount, transaction_date, description, type)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -141,12 +144,26 @@ export const createTransaction = async (req, res) => {
       ]
     );
 
+    const balanceUpdate = payload.type === "income" ? payload.amount : -payload.amount;
+
+    await client.query(
+      `UPDATE accounts
+       SET balance = balance + $1
+       WHERE id = $2 AND user_id = $3`,
+      [balanceUpdate, payload.account_id, req.user.id]
+    );
+
+    await client.query("COMMIT");
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("POST /transaction error: ", error);
     res.status(500).json({ message: "Internal server error" });
+  } finally {
+    client.release();
   }
 };
+
 
 //UPDATE transaction
 export const updateTransaction = async (req, res) => {
@@ -160,8 +177,33 @@ export const updateTransaction = async (req, res) => {
     type,
   } = req.body;
 
+  const client = await db.connect();
   try {
-    const result = await db.query(
+    await client.query("BEGIN");
+
+    const oldRes = await client.query(
+      `SELECT * FROM transactions WHERE id = $1 AND user_id = $2`,
+      [id, req.user.id]
+    );
+
+    if (!oldRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const old = oldRes.rows[0];
+
+    // reveert the balance
+    const revertAmount = old.type === "income" ? -old.amount : old.amount;
+    await client.query(
+      `UPDATE accounts
+       SET balance = balance + $1
+       WHERE id = $2 AND user_id = $3`,
+      [revertAmount, old.account_id, req.user.id]
+    );
+
+    // the actual update transaction
+    const result = await client.query(
       `UPDATE transactions
        SET account_id = COALESCE($1, account_id),
            category_id = COALESCE($2, category_id),
@@ -183,30 +225,73 @@ export const updateTransaction = async (req, res) => {
       ]
     );
 
-    if (!result.rows.length) {
-      return res.status(404).json({ message: "Not found" });
-    }
-    res.status(200).json(result.rows[0]);
+    const updated = result.rows[0];
+
+    // apply the new balance
+    const newAmount = updated.type === "income" ? updated.amount : -updated.amount;
+    await client.query(
+      `UPDATE accounts
+       SET balance = balance + $1
+       WHERE id = $2 AND user_id = $3`,
+      [newAmount, updated.account_id, req.user.id]
+    );
+
+    await client.query("COMMIT");
+    res.status(200).json(updated);
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("PATCH /transactions/:id error:", error);
     res.status(500).json({ message: "Internal server error" });
+  } finally {
+    client.release();
   }
 };
+
 
 //DELETE transaction
 export const deleteTransaction = async (req, res) => {
   const { id } = req.params;
+
+  const client = await db.connect();
   try {
-    await db.query(`DELETE FROM transactions WHERE id = $1 AND user_id = $2`, [
-      id,
-      req.user.id,
-    ]);
+    await client.query("BEGIN");
+
+    const trxRes = await client.query(
+      `SELECT * FROM transactions WHERE id = $1 AND user_id = $2`,
+      [id, req.user.id]
+    );
+
+    if (!trxRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const trx = trxRes.rows[0];
+    const revertAmount = trx.type === "income" ? -trx.amount : trx.amount;
+
+    await client.query(
+      `UPDATE accounts
+       SET balance = balance + $1
+       WHERE id = $2 AND user_id = $3`,
+      [revertAmount, trx.account_id, req.user.id]
+    );
+
+    await client.query(
+      `DELETE FROM transactions WHERE id = $1 AND user_id = $2`,
+      [id, req.user.id]
+    );
+
+    await client.query("COMMIT");
     res.status(204).send();
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("DELETE /transactions/:id error:", error);
     res.status(500).json({ message: "Internal server error" });
+  } finally {
+    client.release();
   }
 };
+
 
 // GET transaction summary
 export const getTransactionSummary = async (req, res) => {
