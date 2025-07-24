@@ -14,36 +14,41 @@ export const getAllTransaction = async (req, res) => {
   } = req.query;
 
   try {
-    let baseQuery = `FROM transactions WHERE user_id = $1`;
+    let baseQuery = `
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.id
+      LEFT JOIN accounts a ON t.account_id = a.id
+      WHERE t.user_id = $1
+    `;
     const params = [userId];
     let paramIndex = 2;
 
     if (start_date) {
-      baseQuery += ` AND transaction_date >= $${paramIndex}`;
+      baseQuery += ` AND t.transaction_date >= $${paramIndex}`;
       params.push(start_date);
       paramIndex++;
     }
 
     if (end_date) {
-      baseQuery += ` AND transaction_date <= $${paramIndex}`;
+      baseQuery += ` AND t.transaction_date <= $${paramIndex}`;
       params.push(end_date);
       paramIndex++;
     }
 
     if (type) {
-      baseQuery += ` AND type = $${paramIndex}`;
+      baseQuery += ` AND t.type = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
 
     if (category_id) {
-      baseQuery += ` AND category_id = $${paramIndex}`;
+      baseQuery += ` AND t.category_id = $${paramIndex}`;
       params.push(category_id);
       paramIndex++;
     }
 
     if (account_id) {
-      baseQuery += ` AND account_id = $${paramIndex}`;
+      baseQuery += ` AND t.account_id = $${paramIndex}`;
       params.push(account_id);
       paramIndex++;
     }
@@ -51,9 +56,12 @@ export const getAllTransaction = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const dataQuery = `
-      SELECT * 
+      SELECT 
+        t.*, 
+        c.name AS category_name, 
+        a.name AS account_name 
       ${baseQuery}
-      ORDER BY transaction_date DESC
+      ORDER BY t.transaction_date DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
@@ -144,7 +152,8 @@ export const createTransaction = async (req, res) => {
       ]
     );
 
-    const balanceUpdate = payload.type === "income" ? payload.amount : -payload.amount;
+    const balanceUpdate =
+      payload.type === "income" ? payload.amount : -payload.amount;
 
     await client.query(
       `UPDATE accounts
@@ -163,7 +172,6 @@ export const createTransaction = async (req, res) => {
     client.release();
   }
 };
-
 
 //UPDATE transaction
 export const updateTransaction = async (req, res) => {
@@ -228,7 +236,8 @@ export const updateTransaction = async (req, res) => {
     const updated = result.rows[0];
 
     // apply the new balance
-    const newAmount = updated.type === "income" ? updated.amount : -updated.amount;
+    const newAmount =
+      updated.type === "income" ? updated.amount : -updated.amount;
     await client.query(
       `UPDATE accounts
        SET balance = balance + $1
@@ -246,7 +255,6 @@ export const updateTransaction = async (req, res) => {
     client.release();
   }
 };
-
 
 //DELETE transaction
 export const deleteTransaction = async (req, res) => {
@@ -291,7 +299,6 @@ export const deleteTransaction = async (req, res) => {
     client.release();
   }
 };
-
 
 // GET transaction summary
 export const getTransactionSummary = async (req, res) => {
